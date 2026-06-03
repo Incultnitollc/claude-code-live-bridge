@@ -99,6 +99,7 @@ describe('listen', () => {
     await new Promise((r) => setTimeout(r, 200))
     const p = join(base, 'rooms', 'default.jsonl')
     await writeFile(p, '', { mode: 0o600 })
+    await new Promise((r) => setTimeout(r, 200))
     await sendMessage({ from: 'me', room: 'default', msg: 'after-trunc' })
     const result = await collected
     await ctrl.close()
