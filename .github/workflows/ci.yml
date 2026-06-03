@@ -22,8 +22,8 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npx eslint . --quiet
-      - run: npx vitest run --coverage
       - run: npm run build
       - run: node ./dist/bin/cc-bridge.js --version
+      - run: npx vitest run --coverage
       - run: npx tsx tests/manual/two-windows.ts
       - run: npm audit --audit-level=high
