@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
-import { writeFile, readdir, readFile } from 'node:fs/promises'
+import { writeFile, readdir, readFile, chmod } from 'node:fs/promises'
 import { join } from 'node:path'
 import { dir as tmpDir } from 'tmp-promise'
 import { listRooms, clearRoom, reapStaleSessions } from '../../src/lib/rooms.js'
@@ -65,5 +65,47 @@ describe('rooms', () => {
     const remaining = await readdir(sessDir)
     expect(remaining).toContain(`${process.pid}.id`)
     expect(remaining).not.toContain('0.id')
+  })
+
+  test('listRooms returns [] when rooms dir is unreadable (readdir fails)', async () => {
+    // Strip read permission from the rooms dir so readdir throws EACCES.
+    await ensureBaseDir()
+    const roomsPath = join(base, 'rooms')
+    await chmod(roomsPath, 0o000)
+    try {
+      const rooms = await listRooms()
+      expect(rooms).toEqual([])
+    } finally {
+      // Restore so afterEach cleanup works.
+      await chmod(roomsPath, 0o700)
+    }
+  })
+
+  test('reapStaleSessions returns 0 when sessions dir is unreadable', async () => {
+    // Strip read permission from the sessions dir so readdir throws EACCES.
+    await ensureBaseDir()
+    const sessPath = join(base, 'sessions')
+    await chmod(sessPath, 0o000)
+    try {
+      const reaped = await reapStaleSessions()
+      expect(reaped).toBe(0)
+    } finally {
+      await chmod(sessPath, 0o700)
+    }
+  })
+
+  test('reapStaleSessions treats EPERM from process.kill as alive (PID 1 not reaped)', async () => {
+    // PID 1 is init/launchd — for a non-root user, process.kill(1, 0) raises EPERM,
+    // which the reaper must interpret as "alive" and skip unlink.
+    await ensureBaseDir()
+    const sessDir = join(base, 'sessions')
+    await writeFile(join(sessDir, '1.id'), 'pid1-id\n', { mode: 0o600 })
+    // Also include a stale entry to confirm reaping still happens for dead PIDs.
+    const deadPid = 2_147_483_640
+    await writeFile(join(sessDir, `${deadPid}.id`), 'dead\n', { mode: 0o600 })
+    await reapStaleSessions()
+    const remaining = await readdir(sessDir)
+    expect(remaining).toContain('1.id')
+    expect(remaining).not.toContain(`${deadPid}.id`)
   })
 })

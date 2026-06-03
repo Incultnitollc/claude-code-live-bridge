@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
-import { appendFile, mkdir, writeFile } from 'node:fs/promises'
+import { appendFile, mkdir, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { dir as tmpDir } from 'tmp-promise'
 import { listen, replayLastN } from '../../src/lib/listen.js'
@@ -142,5 +142,56 @@ describe('listen', () => {
     const msgs = result.filter((r) => r.ok).map((r) => JSON.parse((r as { line: string }).line).msg)
     expect(msgs).not.toContain('before')
     expect(msgs).toContain('after')
+  })
+
+  test('replayLastN > 0 replays prior lines at startup', async () => {
+    // Pre-populate the room, then subscribe with replay=2 to cover the
+    // replay loop branch inside init().
+    await sendMessage({ from: 'me', room: 'default', msg: 'r1' })
+    await sendMessage({ from: 'me', room: 'default', msg: 'r2' })
+    await sendMessage({ from: 'me', room: 'default', msg: 'r3' })
+    const ctrl = listen({ room: 'default', sessionId: 's-replay', replayLastN: 2 })
+    const collected = collect(ctrl.iterator, 2, 1000)
+    const result = await collected
+    await ctrl.close()
+    const msgs = result.filter((r) => r.ok).map((r) => JSON.parse((r as { line: string }).line).msg)
+    expect(msgs).toEqual(['r2', 'r3'])
+  })
+
+  test('accumulated buffer past 128KB without newline emits oversize', async () => {
+    // Write a >128KB payload with no trailing newline so the inner
+    // while-loop never enters, and the post-loop oversize check fires.
+    const p = join(base, 'rooms', 'default.jsonl')
+    await writeFile(p, '', { mode: 0o600 })
+    const ctrl = listen({ room: 'default', sessionId: 's-buf' })
+    const collected = collect(ctrl.iterator, 1, 2000)
+    await new Promise((r) => setTimeout(r, 100))
+    await appendFile(p, 'y'.repeat(150_000))
+    const result = await collected
+    await ctrl.close()
+    expect(
+      result.some((r) => !r.ok && (r as { reason: string }).reason === 'oversize'),
+    ).toBe(true)
+  })
+
+  test('offset persistence failure is swallowed; listen still emits', async () => {
+    // Pre-create a DIRECTORY at the offset file path so writeFile raises EISDIR,
+    // hitting the best-effort catch on offset persistence.
+    const stateDir = join(base, 'state')
+    await mkdir(stateDir, { recursive: true, mode: 0o700 })
+    const offsetPath = join(stateDir, 'default-s-offfail.offset')
+    await rm(offsetPath, { recursive: true, force: true })
+    await mkdir(offsetPath, { recursive: true, mode: 0o700 })
+
+    const p = join(base, 'rooms', 'default.jsonl')
+    await writeFile(p, '', { mode: 0o600 })
+    const ctrl = listen({ room: 'default', sessionId: 's-offfail' })
+    const collected = collect(ctrl.iterator, 1, 2000)
+    await new Promise((r) => setTimeout(r, 100))
+    await sendMessage({ from: 'me', room: 'default', msg: 'still-emits' })
+    const result = await collected
+    await ctrl.close()
+    const msgs = result.filter((r) => r.ok).map((r) => JSON.parse((r as { line: string }).line).msg)
+    expect(msgs).toContain('still-emits')
   })
 })
