@@ -174,6 +174,14 @@ cc-bridge listen
 
 **Offset state:** saved to `~/.cc-bridge/state/<room>-<sessionId>.offset` so `listen` can resume after SIGINT without re-replaying. Stale state for vanished sessions is reaped during `cc-bridge rooms` runs (best-effort, non-fatal).
 
+### 6.3 Watcher Mode — Polling Decision (v0.1.0)
+
+The listen module's chokidar watcher was originally configured with `usePolling: false` (native FSEvents on darwin, inotify on linux). Under chokidar 4.x on macOS, `change` events from FSEvents fire unreliably for our local append-only JSONL workload — tests timed out waiting for events that arrived 5+ seconds late or not at all. Switched to `usePolling: true, interval: 50` for v0.1.0.
+
+**Tradeoff:** ~50ms latency floor on message delivery (negligible for human-driven Claude Code IPC), and constant low background `fs.stat` load (one syscall per room being listened to per 50ms — bounded by number of active sessions, not by message rate).
+
+**Revisit if:** (a) chokidar 4 fixes FSEvents reliability, or (b) profiling shows polling overhead matters at scale. Not a v1.1 priority.
+
 ## 7. Security Model
 
 **Threat model:** local-host IPC only. Same user, same machine. Trust boundary = the user account. This is NOT a network protocol. README states this explicitly.
