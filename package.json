@@ -1,0 +1,75 @@
+{
+  "name": "@incultnitollc/cc-bridge",
+  "version": "0.1.0",
+  "description": "Live JSONL message bridge between local Claude Code sessions",
+  "type": "module",
+  "license": "MIT",
+  "author": "Peng (Incultnito LLC)",
+  "homepage": "https://github.com/Incultnitollc/claude-code-live-bridge#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Incultnitollc/claude-code-live-bridge.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Incultnitollc/claude-code-live-bridge/issues"
+  },
+  "keywords": [
+    "claude-code",
+    "claude",
+    "agent",
+    "ipc",
+    "jsonl",
+    "bridge",
+    "multi-agent"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "cc-bridge": "./dist/bin/cc-bridge.js"
+  },
+  "main": "./dist/lib/index.js",
+  "types": "./dist/lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/lib/index.d.ts",
+      "import": "./dist/lib/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --quiet",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "prepublishOnly": "npm run typecheck && npm run lint && npm run test && npm run build"
+  },
+  "dependencies": {
+    "ansi-regex": "^6.1.0",
+    "chokidar": "^4.0.3",
+    "commander": "^12.1.0",
+    "proper-lockfile": "^4.1.2",
+    "ulid": "^2.3.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/proper-lockfile": "^4.1.4",
+    "@vitest/coverage-v8": "^2.1.8",
+    "eslint": "^9.17.0",
+    "execa": "^9.5.2",
+    "prettier": "^3.4.2",
+    "tmp-promise": "^3.0.3",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.2",
+    "vitest": "^2.1.8"
+  }
+}
