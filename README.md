@@ -1,3 +1,5 @@
+![cc-bridge — live JSONL bridge between local Claude Code sessions](https://raw.githubusercontent.com/Incultnitollc/claude-code-live-bridge/main/og-card.png)
+
 # @incultnitollc/cc-bridge
 
 > Live JSONL message bridge between local Claude Code sessions.
