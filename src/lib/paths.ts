@@ -35,6 +35,10 @@ export function resolveSessionFile(ppid: number): string {
   return join(resolveBaseDir(), 'sessions', `${ppid}.id`)
 }
 
+export function resolveCredentialsFile(): string {
+  return join(resolveBaseDir(), 'credentials.json')
+}
+
 export function resolveOffsetFile(room: string, sessionId: string): string {
   if (!isValidRoomName(room)) {
     throw new Error(`invalid room name: ${room}`)
