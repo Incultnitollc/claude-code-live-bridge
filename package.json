@@ -52,6 +52,7 @@
     "prepublishOnly": "npm run typecheck && npm run lint && npm run test && npm run build"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.108.2",
     "ansi-regex": "^6.1.0",
     "chokidar": "^4.0.3",
     "commander": "^12.1.0",

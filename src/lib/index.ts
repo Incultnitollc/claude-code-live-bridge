@@ -31,4 +31,14 @@ export {
   ensureBaseDir,
   ensureRoomFile,
   isValidRoomName,
+  resolveCredentialsFile,
 } from './paths.js'
+
+export { createBridgeClient, isLoggedIn } from './supabase.js'
+export { sendRemote } from './send-remote.js'
+export { listenRemote } from './listen-remote.js'
+export { resolveBackend, type Backend } from './backend.js'
+export { requestOtp, verifyOtp, logoutAndClear, whoami } from './auth.js'
+export { messageToRow, rowToMessage, type MessageRow } from './message-row.js'
+export { createFileStorage, clearCredentials, type FileStorage } from './credentials.js'
+export { createQueue, type Queue } from './async-queue.js'

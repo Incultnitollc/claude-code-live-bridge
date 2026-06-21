@@ -106,4 +106,25 @@ describe('cli integration', () => {
     const r = await child
     expect(r.stdout).toMatch(/"msg":"before"/)
   })
+
+  test('whoami reports not logged in with no credentials', async () => {
+    const r = await runCli(['whoami'], { CC_BRIDGE_HOME: base })
+    expect(r.exitCode).toBe(0)
+    expect(r.stdout.trim()).toBe('not logged in')
+  })
+
+  test('send --local then listen --local --replay round-trips offline', async () => {
+    await runCli(['send', '--room', 'itest', '--local', 'hello'], {
+      CC_BRIDGE_HOME: base,
+      CC_BRIDGE_FROM: 'tester',
+    })
+    const child = execa(CLI[0]!, [CLI[1]!, 'listen', 'itest', '--local', '--replay', '1'], {
+      env: { ...process.env, CC_BRIDGE_HOME: base, CC_BRIDGE_FROM: 'tester' },
+      reject: false,
+    })
+    await new Promise((r) => setTimeout(r, 500))
+    child.kill('SIGTERM')
+    const r = await child
+    expect(r.stdout).toMatch(/"msg":"hello"/)
+  })
 })

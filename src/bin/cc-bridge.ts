@@ -11,6 +11,14 @@ import {
   validateFile,
   getSessionId,
   parseMessage,
+  resolveBackend,
+  createBridgeClient,
+  sendRemote,
+  listenRemote,
+  requestOtp,
+  verifyOtp,
+  logoutAndClear,
+  whoami,
 } from '../lib/index.js'
 
 const program = new Command()
@@ -30,6 +38,7 @@ program
   .option('--filter <expr>', 'filter expression, e.g. from=B or to=me')
   .option('--from <id>', 'override session id (else CC_BRIDGE_FROM or auto)')
   .option('--json-errors', 'emit warnings as JSON to stderr')
+  .option('--local', 'force local JSONL files even if logged in')
   .action(
     async (
       room: string,
@@ -39,12 +48,17 @@ program
         filter?: string
         from?: string
         jsonErrors?: boolean
+        local?: boolean
       },
     ) => {
       try {
         const sessionId = opts.from ?? (await getSessionId())
         const filter = parseFilter(opts.filter)
-        const ctrl = listen({ room, sessionId, replayLastN: opts.replay })
+        const backend = await resolveBackend({ local: opts.local })
+        const ctrl =
+          backend === 'cloud'
+            ? listenRemote({ room, sessionId, replayLastN: opts.replay }, createBridgeClient())
+            : listen({ room, sessionId, replayLastN: opts.replay })
         const sigint = () => {
           ctrl.close().finally(() => process.exit(0))
         }
@@ -94,10 +108,18 @@ program
   .option('--to <id>', 'direct-message target')
   .option('--reply-to <ulid>', 'message id this replies to')
   .option('--kind <kind>', 'message kind: text | event', 'text')
+  .option('--local', 'force local JSONL files even if logged in')
   .action(
     async (
       msgArg: string | undefined,
-      opts: { room: string; from?: string; to?: string; replyTo?: string; kind: string },
+      opts: {
+        room: string
+        from?: string
+        to?: string
+        replyTo?: string
+        kind: string
+        local?: boolean
+      },
     ) => {
       try {
         let msg = msgArg
@@ -117,14 +139,19 @@ program
           process.exit(1)
         }
         const from = opts.from ?? (await getSessionId())
-        const built = await sendMessage({
+        const backend = await resolveBackend({ local: opts.local })
+        const payload = {
           from,
           room: opts.room,
           msg,
           ...(opts.to !== undefined ? { to: opts.to } : {}),
           ...(opts.replyTo !== undefined ? { reply_to: opts.replyTo } : {}),
           kind: opts.kind as 'text' | 'event',
-        })
+        }
+        const built =
+          backend === 'cloud'
+            ? await sendRemote(payload, createBridgeClient())
+            : await sendMessage(payload)
         process.stdout.write(`${built.id}\n`)
       } catch (e) {
         const msg = (e as Error).message
@@ -206,6 +233,49 @@ program
     }
   })
 
+program
+  .command('login')
+  .description('Log in via email one-time code (enables cloud relay)')
+  .argument('[email]', 'account email')
+  .action(async (emailArg: string | undefined) => {
+    try {
+      const email = emailArg ?? (await prompt('Email: ')).trim()
+      if (!email) {
+        process.stderr.write('cc-bridge: email required\n')
+        process.exit(1)
+      }
+      const client = createBridgeClient()
+      await requestOtp(client, email)
+      process.stderr.write(`cc-bridge: 6-digit code sent to ${email}\n`)
+      const token = (await prompt('Code: ')).trim()
+      const who = await verifyOtp(client, email, token)
+      process.stdout.write(`logged in as ${who}\n`)
+    } catch (e) {
+      process.stderr.write(`cc-bridge: ${(e as Error).message}\n`)
+      process.exit(1)
+    }
+  })
+
+program
+  .command('logout')
+  .description('Log out and clear cached credentials')
+  .action(async () => {
+    await logoutAndClear(createBridgeClient())
+    process.stdout.write('logged out\n')
+  })
+
+program
+  .command('whoami')
+  .description('Show the logged-in account email (or "not logged in")')
+  .action(async () => {
+    try {
+      const who = await whoami(createBridgeClient())
+      process.stdout.write(who ? `${who}\n` : 'not logged in\n')
+    } catch {
+      process.stdout.write('not logged in\n')
+    }
+  })
+
 await program.parseAsync(process.argv)
 
 function readStdin(): Promise<string> {
@@ -216,6 +286,16 @@ function readStdin(): Promise<string> {
       data += data.length === 0 ? line : `\n${line}`
     })
     rl.on('close', () => resolve(data))
+  })
+}
+
+function prompt(label: string): Promise<string> {
+  return new Promise((resolve) => {
+    const rl = createInterface({ input: process.stdin, output: process.stderr })
+    rl.question(label, (answer) => {
+      rl.close()
+      resolve(answer)
+    })
   })
 }
 
