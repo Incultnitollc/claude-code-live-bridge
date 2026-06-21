@@ -52,6 +52,10 @@ realtime.
 A dedicated **new** Supabase project hosts this (isolation + clean billing later).
 Free tier.
 
+- **Account:** incultnitopeng@gmail.com
+- **Project name:** cc-bridge
+- **Project URL / anon key:** _provided by user; plugged into `CC_BRIDGE_SUPABASE_URL` + `CC_BRIDGE_SUPABASE_ANON_KEY` at implementation time._
+
 ## Data model — one table, one migration
 
 ```sql
