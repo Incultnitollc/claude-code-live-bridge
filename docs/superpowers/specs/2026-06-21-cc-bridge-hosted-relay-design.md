@@ -54,7 +54,9 @@ Free tier.
 
 - **Account:** incultnitopeng@gmail.com
 - **Project name:** cc-bridge
-- **Project URL / anon key:** _provided by user; plugged into `CC_BRIDGE_SUPABASE_URL` + `CC_BRIDGE_SUPABASE_ANON_KEY` at implementation time._
+- **Project ref:** lyktygwrmhfdxqoqzdxb
+- **Project URL:** https://lyktygwrmhfdxqoqzdxb.supabase.co
+- **Anon key:** _pending from user (Settings → API → anon public)._ Plugged into `CC_BRIDGE_SUPABASE_URL` + `CC_BRIDGE_SUPABASE_ANON_KEY` (env override) with baked defaults in `src/lib/config.ts`.
 
 ## Data model — one table, one migration
 
