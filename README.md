@@ -4,6 +4,8 @@
 
 > Live JSONL message bridge between local Claude Code sessions.
 
+> **Status (2026): maintenance / OSS-parked.** Claude Code now ships this natively — **[Agent Teams](https://code.claude.com/docs/en/agent-teams)** (a shared task list + Mailbox with `SendMessage` between teammates in one session) and **[Remote Control](https://code.claude.com/docs/en/remote-control)** (syncs a local session across claude.ai/code + mobile, compute stays local). Prefer those. `cc-bridge` remains a tiny zero-dependency primitive for the one gap they don't cover yet: messaging between **independent, separately-launched** sessions/projects on one machine (cf. [claude-code#36181](https://github.com/anthropics/claude-code/issues/36181)). No new features planned.
+
 Two (or more) Claude Code windows on the same machine. They need to talk in real time. `cc-bridge` gives each session a CLI to **send** a message to a shared file and **listen** for new messages via a file-tail stream that Claude's `Monitor` tool consumes as live push notifications. No daemon, no network, no polling.
 
 ## Install
@@ -87,8 +89,10 @@ for await (const ev of ctrl.iterator) {
 
 ## Roadmap
 
-- **v1.1** — `cc-bridge install-hooks` (auto-wire Claude Code Stop/UserPromptSubmit hooks), DM filtering (`--me`), time-based replay (`--replay 1h`), read receipts, Windows support.
-- **v2** — MCP server wrapper, cross-machine backend (Supabase Realtime / Redis), webhook fanout, observer dashboard.
+**Frozen 2026-07-09 — OSS-parked. No further feature work planned.**
+
+- ~~**v2** — MCP server wrapper, cross-machine backend (Supabase Realtime / Redis), webhook fanout, observer dashboard~~ — **shelved.** Superseded by first-party **Remote Control** (cross-device session sync, compute stays local). The unused relay schema at `supabase/migrations/20260621000000_messages.sql` is retained for reference only.
+- ~~**v1.1** — install-hooks, DM filtering, time-based replay, read receipts, Windows support~~ — parked; open a PR if you want any of these.
 
 ## License
 
